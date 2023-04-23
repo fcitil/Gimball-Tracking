@@ -13,26 +13,25 @@ from libs.pid import PID
 from libs.servocontrol import start_link, send_data
 
 
+
 objX = 0
 objY = 0
 centerX = 0
 centerY = 0
+outputX = 0
+outputY = 0
+found = False
 
 
 def obj_center():
 
-    vs = cv2.VideoCapture(0,cv2.CAP_DSHOW)
-    time.sleep(2.0)
+    
+    vs = cv2.VideoCapture("1")
 
     obj = ObjCenter(join(realpath(dirname(__file__)), "haar.xml"))
 
-    global objX
-    global objY
-    global centerX
-    global centerY
-    global width
-    global height
-
+    global objX , objY , centerX , centerY , width , height , rect , outputX , outputY, found 
+    
     ret, img = vs.read()
     scale_percent = 100  # percent of original size
     width = int(img.shape[1] * scale_percent / 100)
@@ -64,7 +63,9 @@ def obj_center():
             if rect is not None:
                 (x, y, w, h) = rect
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
+                found = True
+            else: 
+                found = False
         except:
             pass
         cv2.imshow("Selam Furkan", frame)
@@ -80,10 +81,10 @@ def pid_processX(p, i, d):
     p.initialize()
 
     while True:
-        error = centerX - objX
-        # print(centerCoord,objCoord,error)
-        outputX = p.update(error)
-        time.sleep(0.1)
+        if found: 
+            error = centerX - objX
+            # print(centerCoord,objCoord,error)
+            outputX = p.update(error)
 
 
 def pid_processY(p, i, d):
@@ -93,10 +94,11 @@ def pid_processY(p, i, d):
     p.initialize()
 
     while True:
-        error = centerY - objY
-        # print(centerCoord,objCoord,error)
-        outputY = p.update(error)
-        time.sleep(0.1)
+        if  found:
+            error = centerY - objY
+            # print(centerCoord,objCoord,error)
+            outputY = p.update(error)
+
 
 
 def send_angl(ser):
@@ -104,15 +106,15 @@ def send_angl(ser):
     #time.sleep(5)
     while True:
         try:
-            pan = int(outputY+90)
-            tilt = int(outputX)
+            tilt = int(outputY+1500)
+            pan = int(-outputX+1500)
             send_data(ser,pan,tilt)
         except:
             pass
         
         
 def plotter():
-    time.sleep(10)
+    time.sleep(2)
     x_data, y_data ,time_data = [], [] , []
 
     figure = plt.figure()
@@ -134,32 +136,38 @@ def plotter():
     anim = FuncAnimation(figure, update, interval=200 , save_count=50)
     plt.show()
     
-
+# track(source="0")
 # TODO : can uset the multiprocessing instead of threading
 detection_thread = Thread(target=obj_center)
 detection_thread.daemon = True
 detection_thread.start()
-time.sleep(5)
-pidy_thread = Thread(target=pid_processY, args=(0.09, 0.08, 0.002))
-pidx_thread = Thread(target=pid_processX, args=(0.11, 0.10, 0.002))
 
-ser = start_link("COM7")
-
-
-command_thread =  Thread(target=send_angl, args = [ser])
-
-command_thread.daemon=True
+pidy_thread = Thread(target=pid_processY, args=(0.8, 0.5, 0.1))
+pidx_thread = Thread(target=pid_processX, args=(0.8, 0.5, 0.1))
 pidx_thread.daemon = True
 pidy_thread.daemon = True
 
 pidy_thread.start()
 pidx_thread.start()
 
-command_thread.start()
+# try:
+#     ser = start_link("/dev/ttyUSB0")
+# except:
+#     ser = start_link("/dev/ttyUSB1")
 
-#plotter_thread = Thread(target=plotter)
-#plotter_thread.daemon = True
-#plotter_thread.start()
+# command_thread =  Thread(target=send_angl, args = [ser])
+
+# command_thread.daemon=True
+
+# command_thread.start()
+
+# plotter_thread = Thread(target=plotter)
+# plotter_thread.daemon = True
+# plotter_thread.start()
+
+
+
+
 
 #plotter()
 
@@ -170,6 +178,6 @@ while True:
         # print("center position x: , y: " ,centerX, centerY)
         print(f"output x:{outputX} y:{outputY}")
     except:
-        ser.close()
+        # ser.close()
         pass
     pass

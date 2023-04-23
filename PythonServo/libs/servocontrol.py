@@ -7,15 +7,9 @@ def start_link(port:str = "/dev/tty1"):
 
 def send_data(ser, pan:int,tilt:int):
     try:
-        angle = max(min(pan, 135), 45)
-        ser.write((str(angle)+"\n").encode())
-        print("pan angle set to", angle)
-    
-        angle = max(min(tilt, 180), 0)
-        ser.write((str(angle)+"\n").encode())
-        print("tilt angle set to", angle)
+        ser.write((str(max(min(pan,2500),800))+ "," + str(max(min(tilt,2500),800)) +"\n").encode())
         
 
     except:
         print("error occured in sending data")
-    time.sleep(0.1)
+    time.sleep(0.02)
