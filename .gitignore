@@ -1,4 +1,5 @@
 .vscode/
+.conda/
 
 # interpreter bytecode
 __pycache__/
